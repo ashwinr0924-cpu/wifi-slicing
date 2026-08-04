@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2-Minute Video Recording Studio — AI Network Optimizer</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #0b0f19; color: #fff; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Left Teleprompter Sidebar */
+        .sidebar { width: 420px; background: #111827; border-right: 1px solid #1f2937; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+        .header { margin-bottom: 15px; }
+        .header h1 { font-size: 20px; color: #60a5fa; }
+        .header p { font-size: 12px; color: #9ca3af; }
+        
+        .timer-box { background: #1f2937; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px; border: 1px solid #374151; }
+        .timer { font-size: 38px; font-weight: bold; font-family: monospace; color: #34d399; }
+        .phase-label { font-size: 13px; color: #f59e0b; font-weight: 600; text-transform: uppercase; margin-top: 5px; }
+        
+        .script-container { flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 15px; }
+        .script-card { background: #192231; padding: 14px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #3b82f6; transition: all 0.3s ease; }
+        .script-card.active { border-left-color: #10b981; background: #1e293b; box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
+        .script-card h3 { font-size: 14px; color: #93c5fd; margin-bottom: 6px; }
+        .script-card p { font-size: 13px; color: #e2e8f0; line-height: 1.5; }
+        
+        .controls { display: flex; gap: 10px; }
+        .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; }
+        .btn-record { background: #ef4444; color: white; }
+        .btn-record:hover { background: #dc2626; }
+        .btn-stop { background: #4b5563; color: white; }
+        .btn-stop:hover { background: #374151; }
+
+        /* Main Viewport */
+        .viewport { flex: 1; display: flex; flex-direction: column; }
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+
+    <!-- Teleprompter & Recording Controls -->
+    <div class="sidebar">
+        <div class="header">
+            <h1>🎬 Hackathon Video Studio</h1>
+            <p>2-Minute Video Recorder & Teleprompter</p>
+        </div>
+
+        <div class="timer-box">
+            <div class="timer" id="timer">00:00</div>
+            <div class="phase-label" id="phase">Ready to Record</div>
+        </div>
+
+        <div class="script-container">
+            <div class="script-card active" id="sec-1">
+                <h3>1. Problem & Hook (0:00 - 0:25)</h3>
+                <p>"Over 95% of home internet traffic is encrypted today. Traditional consumer routers are blind to encrypted traffic, causing massive lag spikes and bufferbloat whenever someone starts a background download."</p>
+            </div>
+
+            <div class="script-card" id="sec-2">
+                <h3>2. AI Solution (0:25 - 1:15)</h3>
+                <p>"Meet the AI-Driven Adaptive Network Optimizer. Instead of reading private payloads, our system extracts zero-payload flow metadata. Our LightGBM machine learning model classifies encrypted traffic in under 1 millisecond."</p>
+            </div>
+
+            <div class="script-card" id="sec-3">
+                <h3>3. Live Demo & WOW Moment (1:15 - 1:45)</h3>
+                <p>"Watch this live: As the background download starts, our engine detects the traffic pattern, applies Windows kernel NetQoS rules to cap downloads at 5 Mbps, and clamps TCP MSS. Instantly, gaming ping drops from 320ms back to 15ms!"</p>
+            </div>
+
+            <div class="script-card" id="sec-4">
+                <h3>4. Impact & Closing (1:45 - 2:00)</h3>
+                <p>"Our solution requires zero new hardware. It installs directly as a software module on Windows hosts or OpenWrt router firmware, bringing enterprise-grade QoS to smart homes worldwide. Thank you!"</p>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-record" id="startBtn">🔴 Start 2-Min Recording</button>
+            <button class="btn btn-stop" id="stopBtn" disabled>⏹️ Stop & Download</button>
+        </div>
+    </div>
+
+    <!-- Live Dashboard Viewport -->
+    <div class="viewport">
+        <iframe src="http://localhost:5173" id="dashFrame"></iframe>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let recordedChunks = [];
+        let timerInterval;
+        let seconds = 0;
+
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const timerDisplay = document.getElementById('timer');
+        const phaseDisplay = document.getElementById('phase');
+
+        const sec1 = document.getElementById('sec-1');
+        const sec2 = document.getElementById('sec-2');
+        const sec3 = document.getElementById('sec-3');
+        const sec4 = document.getElementById('sec-4');
+
+        startBtn.addEventListener('click', async () => {
+            try {
+                // Request screen recording stream
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { mediaSource: "screen" },
+                    audio: true
+                });
+
+                recordedChunks = [];
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) recordedChunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'AI_Network_Optimizer_2Min_Demo.webm';
+                    a.click();
+                    resetTimer();
+                };
+
+                mediaRecorder.start();
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                startTimer();
+
+            } catch (err) {
+                alert("Recording permission denied or cancelled: " + err.message);
+            }
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (mediaRecorder) mediaRecorder.stop();
+        });
+
+        function startTimer() {
+            seconds = 0;
+            timerInterval = setInterval(() => {
+                seconds++;
+                let m = String(Math.floor(seconds / 60)).padStart(2, '0');
+                let s = String(seconds % 60).padStart(2, '0');
+                timerDisplay.textContent = `${m}:${s}`;
+
+                // Update Teleprompter Sections & Highlights
+                if (seconds <= 25) {
+                    phaseDisplay.textContent = "Section 1: Problem & Hook";
+                    highlight(sec1);
+                } else if (seconds <= 75) {
+                    phaseDisplay.textContent = "Section 2: AI Solution";
+                    highlight(sec2);
+                } else if (seconds <= 105) {
+                    phaseDisplay.textContent = "Section 3: Live Demo / WOW";
+                    highlight(sec3);
+                } else if (seconds <= 120) {
+                    phaseDisplay.textContent = "Section 4: Closing";
+                    highlight(sec4);
+                } else {
+                    phaseDisplay.textContent = "⏱️ Time Limit Reached (2:00)";
+                }
+            }, 1000);
+        }
+
+        function highlight(element) {
+            [sec1, sec2, sec3, sec4].forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timerDisplay.textContent = "00:00";
+            phaseDisplay.textContent = "Recording Complete & Downloaded!";
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        }
+    </script>
+</body>
+</html>
