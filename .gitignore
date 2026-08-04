@@ -9,14 +9,19 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# Virtual environments
+# Virtual environments & Node modules
 venv/
 .venv/
 env/
 ENV/
+node_modules/
+dashboard/node_modules/
+dashboard/dist/
+dist/
 
 # Project temporary state files
 network_state.json
+dashboard/public/network_state.json
 
 # Local streamlit configurations
 .streamlit/
