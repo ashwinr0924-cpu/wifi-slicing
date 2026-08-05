@@ -47,27 +47,50 @@ export function App() {
             const mappedFlows: NetworkFlow[] = liveData.map((item: any, idx: number) => {
               const speedVal = parseFloat(item["Current Speed"]) || 0.5;
               const latencyVal = parseFloat(item["Ping / Latency"]) || 15.0;
-              const cat = item["Detected Class"] === 'Gaming/VoIP' ? 'Gaming / VoIP' : 
-                          item["Detected Class"] === 'Video Streaming' ? 'Video Streaming' : 'Bulk Download';
+              
+              let cat: any = 'Web Browsing';
+              if (item["Detected Class"] === 'Gaming/VoIP') cat = 'Gaming';
+              else if (item["Detected Class"] === 'Video Streaming') cat = 'Streaming';
+              else if (item["Detected Class"] === 'Bulk Download') cat = 'Background Download';
+
+              let priority: any = 'Medium';
+              let dscpTag = 'DSCP 0';
+              let statusTag: any = 'Normal';
+
+              if (item["QoS Policy Applied"]?.includes('DSCP 46')) {
+                priority = 'Highest';
+                dscpTag = 'DSCP 46 (EF)';
+                statusTag = 'Prioritized';
+              } else if (item["QoS Policy Applied"]?.includes('DSCP 8')) {
+                priority = 'Low';
+                dscpTag = 'DSCP 8 (CS1)';
+                statusTag = 'Throttled';
+              }
+
               return {
                 id: `flow-live-${idx}`,
-                fiveTuple: `${item["Client IP"]}:443 -> Gateway:80`,
-                sourceIp: item["Client IP"],
-                destIp: '192.168.137.1',
-                sourcePort: 49152 + idx,
-                destPort: 443,
-                protocol: 'TCP',
-                detectedCategory: cat,
-                confidenceScore: 0.97,
-                currentSpeed: item["Current Speed"],
+                device: item["Client Device"] || `Device ${item["Client IP"]}`,
+                ip: item["Client IP"] || '192.168.137.100',
+                srcPort: 49152 + idx,
+                dstPort: cat === 'Gaming' ? 17000 : 443,
+                protocol: cat === 'Gaming' ? 'UDP' : 'TCP',
+                trafficType: cat,
+                predictedClass: cat,
+                confidence: 0.974,
+                currentSpeed: item["Current Speed"] || `${speedVal.toFixed(2)} Mbps`,
                 speedMbps: speedVal,
                 latency: latencyVal,
-                assignedQueue: item["QoS Policy Applied"].includes('DSCP 46') ? 'Priority 1 (Ultra-Low Latency)' :
-                               item["QoS Policy Applied"].includes('DSCP 8') ? 'Priority 3 (Throttled)' : 'Priority 2 (High Throughput)',
+                qosPriority: priority,
+                dscp: dscpTag,
+                status: statusTag,
                 packetCount: Math.floor(speedVal * 120) + 150,
                 byteCount: Math.floor(speedVal * 125000) + 10000,
-                status: 'Active',
-                deviceRole: item["Client Device"]
+                pktSizeMean: cat === 'Gaming' ? 120 : cat === 'Streaming' ? 1250 : 1460,
+                pktSizeStd: cat === 'Gaming' ? 15 : cat === 'Streaming' ? 250 : 5,
+                iatMean: cat === 'Gaming' ? 12.5 : cat === 'Streaming' ? 180.0 : 1.5,
+                iatStd: cat === 'Gaming' ? 2.1 : cat === 'Streaming' ? 45.0 : 0.2,
+                burstCount: cat === 'Streaming' ? 18 : 3,
+                dirRatio: 0.15
               };
             });
             setFlows(mappedFlows);
